@@ -1040,6 +1040,13 @@ async function autoOrganizeAndClear() {
   document.getElementById('todayLabel').textContent = getToday();
   document.getElementById('aiResult').classList.remove('visible');
 
+  // localStorage의 raw 데이터 제거 (재접속 시 어제 내용 재표시 방지)
+  const idx = memos.findIndex(m => m.date === key);
+  if (idx >= 0) {
+    memos[idx].raw = '';
+    localStorage.setItem('memo_data', JSON.stringify(memos));
+  }
+
   // 다음 자정 예약
   scheduleMidnight();
 }
