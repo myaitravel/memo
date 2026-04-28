@@ -649,11 +649,22 @@ function changePattern() {
 }
 
 // ─── DATE HELPERS ───────────────────────────────────────────
+function getKSTDate() {
+  // 항상 한국 시간(KST = UTC+9) 기준으로 Date 반환
+  const now = new Date();
+  const kstOffset = 9 * 60; // 분 단위
+  const utcOffset = now.getTimezoneOffset(); // 로컬 UTC 오프셋 (분)
+  return new Date(now.getTime() + (kstOffset + utcOffset) * 60000);
+}
 function getToday() {
-  return new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  return getKSTDate().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 }
 function getTodayKey() {
-  return new Date().toISOString().split('T')[0];
+  const kst = getKSTDate();
+  const y = kst.getFullYear();
+  const m = String(kst.getMonth() + 1).padStart(2, '0');
+  const d = String(kst.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 // ─── MEMO ───────────────────────────────────────────────────
@@ -1091,10 +1102,11 @@ async function syncToDocs(memo) {
 
 // ─── 자정 자동화 ─────────────────────────────────────────────
 function getMidnightTimeout() {
-  const now = new Date();
-  const midnight = new Date();
+  // 한국 시간 기준 자정까지 남은 밀리초
+  const kst = getKSTDate();
+  const midnight = new Date(kst);
   midnight.setHours(24, 0, 0, 0);
-  return midnight - now;
+  return midnight - kst;
 }
 
 async function autoOrganizeAndClear() {
@@ -1105,7 +1117,8 @@ async function autoOrganizeAndClear() {
     // AI 정리가 아직 안 된 경우에만 실행
     if (!memo.organized && apiKey) {
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        const aiEndpoint = localStorage.getItem('memo_ai_endpoint') || 'https://aiprimetech.io/v1';
+        const res = await fetch(`${aiEndpoint}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
